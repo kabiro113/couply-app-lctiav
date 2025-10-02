@@ -13,40 +13,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/IconSymbol";
 import { colors, typography, spacing, borderRadius, shadows, commonStyles } from "@/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  date: Date;
-  type: 'anniversary' | 'date' | 'milestone' | 'reminder';
-  description?: string;
-}
+import { useCalendar } from "@/hooks/useCalendar";
 
 export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [events] = useState<CalendarEvent[]>([
-    {
-      id: '1',
-      title: 'Our Anniversary',
-      date: new Date(2024, 1, 14), // February 14, 2024
-      type: 'anniversary',
-      description: 'Celebrating 2 years together! 💕',
-    },
-    {
-      id: '2',
-      title: 'Date Night',
-      date: new Date(2024, 11, 25), // December 25, 2024
-      type: 'date',
-      description: 'Dinner at our favorite restaurant',
-    },
-    {
-      id: '3',
-      title: 'Movie Night',
-      date: new Date(2024, 11, 28), // December 28, 2024
-      type: 'date',
-      description: 'Cozy night in with popcorn',
-    },
-  ]);
+  const { events, loading, createEvent, getEventsForDate } = useCalendar();
 
   const currentMonth = selectedDate.getMonth();
   const currentYear = selectedDate.getFullYear();
@@ -65,12 +36,8 @@ export default function CalendarScreen() {
     return new Date(year, month, 1).getDay();
   };
 
-  const getEventsForDate = (date: Date) => {
-    return events.filter(event => 
-      event.date.getDate() === date.getDate() &&
-      event.date.getMonth() === date.getMonth() &&
-      event.date.getFullYear() === date.getFullYear()
-    );
+  const getEventsForDateLocal = (date: Date) => {
+    return getEventsForDate(date);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -85,7 +52,7 @@ export default function CalendarScreen() {
 
   const renderCalendarDay = (day: number, isCurrentMonth: boolean = true) => {
     const date = new Date(currentYear, currentMonth, day);
-    const dayEvents = getEventsForDate(date);
+    const dayEvents = getEventsForDateLocal(date);
     const isToday = date.toDateString() === today.toDateString();
     const hasEvents = dayEvents.length > 0;
 
@@ -151,7 +118,7 @@ export default function CalendarScreen() {
     );
   };
 
-  const getEventIcon = (type: CalendarEvent['type']) => {
+  const getEventIcon = (type: string) => {
     switch (type) {
       case 'anniversary':
         return 'heart.fill';
@@ -166,7 +133,7 @@ export default function CalendarScreen() {
     }
   };
 
-  const getEventColor = (type: CalendarEvent['type']) => {
+  const getEventColor = (type: string) => {
     switch (type) {
       case 'anniversary':
         return colors.primary;
@@ -182,8 +149,8 @@ export default function CalendarScreen() {
   };
 
   const upcomingEvents = events
-    .filter(event => event.date >= today)
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .filter(event => new Date(event.start_date) >= today)
+    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
     .slice(0, 3);
 
   return (
@@ -279,13 +246,13 @@ export default function CalendarScreen() {
           ) : (
             upcomingEvents.map(event => (
               <View key={event.id} style={styles.eventCard}>
-                <View style={[styles.eventIcon, { backgroundColor: getEventColor(event.type) }]}>
-                  <IconSymbol name={getEventIcon(event.type) as any} color={colors.card} size={20} />
+                <View style={[styles.eventIcon, { backgroundColor: getEventColor(event.event_type || 'date') }]}>
+                  <IconSymbol name={getEventIcon(event.event_type || 'date') as any} color={colors.card} size={20} />
                 </View>
                 <View style={styles.eventContent}>
                   <Text style={[typography.h3, { fontSize: 16 }]}>{event.title}</Text>
                   <Text style={[typography.caption, { marginTop: 2 }]}>
-                    {event.date.toLocaleDateString()} • {event.description}
+                    {new Date(event.start_date).toLocaleDateString()} • {event.description}
                   </Text>
                 </View>
               </View>

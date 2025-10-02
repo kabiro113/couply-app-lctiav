@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { ScrollView, View, Text, Pressable, StyleSheet, Platform, Image } from "react-native";
 import { IconSymbol } from "@/components/IconSymbol";
 import { GlassView } from "expo-glass-effect";
@@ -8,9 +8,13 @@ import { useTheme } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, borderRadius, shadows, commonStyles } from "@/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "@/hooks/useAuth";
+import { useCouple } from "@/hooks/useCouple";
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const { user, profile, signOut } = useAuth();
+  const { couple } = useCouple();
 
   const quickActions = [
     {
@@ -18,28 +22,28 @@ export default function HomeScreen() {
       description: "Share a sweet message",
       icon: "heart.text.square.fill",
       color: colors.primary,
-      action: () => console.log("Send love note"),
+      action: () => router.push("/(tabs)/chat"),
     },
     {
       title: "Plan Date Night",
       description: "Schedule quality time",
       icon: "calendar.badge.plus",
       color: colors.secondary,
-      action: () => console.log("Plan date night"),
+      action: () => router.push("/(tabs)/calendar"),
     },
     {
-      title: "Memory Vault",
-      description: "Save precious moments",
-      icon: "photo.on.rectangle.angled",
+      title: "Community Feed",
+      description: "Connect with other couples",
+      icon: "person.2.fill",
       color: colors.accent,
-      action: () => console.log("Open memory vault"),
+      action: () => router.push("/social/feed"),
     },
     {
-      title: "Mood Check-in",
-      description: "How are you feeling?",
-      icon: "face.smiling",
+      title: "Challenges",
+      description: "Fun couple challenges",
+      icon: "star.fill",
       color: colors.success,
-      action: () => console.log("Mood check-in"),
+      action: () => router.push("/social/challenges"),
     },
   ];
 
@@ -62,7 +66,7 @@ export default function HomeScreen() {
 
   const renderHeaderRight = () => (
     <Pressable
-      onPress={() => console.log("Settings pressed")}
+      onPress={() => router.push("/(tabs)/profile")}
       style={styles.headerButton}
     >
       <IconSymbol name="gear" color={colors.text} size={20} />
@@ -97,24 +101,47 @@ export default function HomeScreen() {
           end={{ x: 1, y: 1 }}
         >
           <View style={styles.headerContent}>
-            <Text style={styles.welcomeText}>Welcome to</Text>
-            <Text style={styles.appTitle}>Couply</Text>
+            <Text style={styles.welcomeText}>Welcome back</Text>
+            <Text style={styles.appTitle}>{profile?.name || 'User'}</Text>
             <Text style={styles.tagline}>Where Couples Grow Together</Text>
             
             {/* Couple Status Card */}
             <View style={styles.coupleStatusCard}>
               <View style={styles.coupleAvatars}>
                 <View style={[styles.avatar, styles.avatarLeft]}>
-                  <IconSymbol name="person.fill" color={colors.textSecondary} size={24} />
+                  {profile?.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <IconSymbol name="person.fill" color={colors.textSecondary} size={24} />
+                  )}
                 </View>
                 <View style={[styles.avatar, styles.avatarRight]}>
-                  <IconSymbol name="person.fill" color={colors.textSecondary} size={24} />
+                  {couple ? (
+                    <IconSymbol name="person.fill" color={colors.textSecondary} size={24} />
+                  ) : (
+                    <IconSymbol name="plus" color={colors.textSecondary} size={24} />
+                  )}
                 </View>
               </View>
-              <Text style={styles.coupleStatusText}>Link with your partner to get started</Text>
-              <Pressable style={styles.linkButton} onPress={() => console.log("Link partner")}>
-                <Text style={styles.linkButtonText}>Link Partner</Text>
-              </Pressable>
+              {couple ? (
+                <>
+                  <Text style={styles.coupleStatusText}>
+                    {couple.couple_name || `${couple.partner1?.name} & ${couple.partner2?.name}`}
+                  </Text>
+                  {couple.anniversary_date && (
+                    <Text style={styles.anniversaryText}>
+                      Together since {new Date(couple.anniversary_date).toLocaleDateString()}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.coupleStatusText}>Link with your partner to get started</Text>
+                  <Pressable style={styles.linkButton} onPress={() => router.push("/(tabs)/profile")}>
+                    <Text style={styles.linkButtonText}>Link Partner</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </View>
         </LinearGradient>
@@ -222,6 +249,16 @@ const styles = StyleSheet.create({
   },
   avatarRight: {
     marginLeft: -10,
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  anniversaryText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   coupleStatusText: {
     ...typography.body,

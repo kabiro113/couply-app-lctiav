@@ -28,9 +28,15 @@ export default function TabLayout() {
       label: 'Calendar',
     },
     {
+      name: 'social',
+      route: '/social/feed',
+      icon: 'person.2.fill',
+      label: 'Social',
+    },
+    {
       name: 'profile',
       route: '/(tabs)/profile',
-      icon: 'person.2.fill',
+      icon: 'person.fill',
       label: 'Profile',
     },
   ];
@@ -51,8 +57,12 @@ export default function TabLayout() {
           <Icon sf="calendar" drawable="ic_calendar" />
           <Label>Calendar</Label>
         </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="social">
+          <Icon sf="person.2.fill" drawable="ic_social" />
+          <Label>Social</Label>
+        </NativeTabs.Trigger>
         <NativeTabs.Trigger name="profile">
-          <Icon sf="person.2.fill" drawable="ic_profile" />
+          <Icon sf="person.fill" drawable="ic_profile" />
           <Label>Profile</Label>
         </NativeTabs.Trigger>
       </NativeTabs>

@@ -8,48 +8,32 @@ import {
   Pressable, 
   Platform,
   Alert,
-  Switch
+  Switch,
+  TextInput,
+  Modal
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/IconSymbol";
 import { colors, typography, spacing, borderRadius, shadows, commonStyles } from "@/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface CoupleProfile {
-  isLinked: boolean;
-  partner1: {
-    name: string;
-    avatar?: string;
-  };
-  partner2: {
-    name: string;
-    avatar?: string;
-  };
-  anniversaryDate?: Date;
-  bio?: string;
-  isPrivateMode: boolean;
-}
+import { useAuth } from "@/hooks/useAuth";
+import { useCouple } from "@/hooks/useCouple";
+import { router } from "expo-router";
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState<CoupleProfile>({
-    isLinked: false,
-    partner1: {
-      name: "You",
-    },
-    partner2: {
-      name: "Your Partner",
-    },
-    isPrivateMode: true,
-  });
-
+  const { user, profile, signOut, updateProfile } = useAuth();
+  const { couple, updateCouple } = useCouple();
   const [showSettings, setShowSettings] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [partnerEmail, setPartnerEmail] = useState('');
+  const [anniversaryDate, setAnniversaryDate] = useState('');
 
   const profileStats = [
-    { label: "Days Together", value: profile.anniversaryDate ? 
-      Math.floor((new Date().getTime() - profile.anniversaryDate.getTime()) / (1000 * 60 * 60 * 24)) : 0 },
-    { label: "Messages Sent", value: 247 },
-    { label: "Memories Saved", value: 18 },
-    { label: "Goals Completed", value: 5 },
+    { label: "Days Together", value: couple?.anniversary_date ? 
+      Math.floor((new Date().getTime() - new Date(couple.anniversary_date).getTime()) / (1000 * 60 * 60 * 24)) : 0 },
+    { label: "Messages Sent", value: 0 }, // TODO: Get from backend
+    { label: "Memories Saved", value: 0 }, // TODO: Get from backend
+    { label: "Goals Completed", value: 0 }, // TODO: Get from backend
   ];
 
   const settingsOptions = [
@@ -58,29 +42,40 @@ export default function ProfileScreen() {
       description: "Keep your relationship private",
       icon: "lock.fill",
       type: "toggle" as const,
-      value: profile.isPrivateMode,
-      onToggle: (value: boolean) => setProfile(prev => ({ ...prev, isPrivateMode: value })),
+      value: couple?.is_private_mode || false,
+      onToggle: async (value: boolean) => {
+        if (couple) {
+          await updateCouple({ is_private_mode: value });
+        }
+      },
     },
     {
-      title: "Notifications",
-      description: "Manage your notification preferences",
-      icon: "bell.fill",
+      title: "Community Feed",
+      description: "Connect with other couples",
+      icon: "person.2.fill",
       type: "navigation" as const,
-      onPress: () => Alert.alert('Feature Coming Soon', 'Notification settings will be available soon!'),
+      onPress: () => router.push('/social/feed'),
     },
     {
-      title: "Data & Privacy",
-      description: "Control your data and privacy settings",
-      icon: "shield.fill",
+      title: "Discussion Groups",
+      description: "Join couple discussion groups",
+      icon: "message.fill",
       type: "navigation" as const,
-      onPress: () => Alert.alert('Feature Coming Soon', 'Privacy settings will be available soon!'),
+      onPress: () => router.push('/social/groups'),
     },
     {
-      title: "Help & Support",
-      description: "Get help and contact support",
-      icon: "questionmark.circle.fill",
+      title: "Challenges",
+      description: "Participate in fun challenges",
+      icon: "star.fill",
       type: "navigation" as const,
-      onPress: () => Alert.alert('Feature Coming Soon', 'Help & support will be available soon!'),
+      onPress: () => router.push('/social/challenges'),
+    },
+    {
+      title: "Sign Out",
+      description: "Sign out of your account",
+      icon: "arrow.right.square.fill",
+      type: "navigation" as const,
+      onPress: () => handleSignOut(),
     },
   ];
 
@@ -93,20 +88,46 @@ export default function ProfileScreen() {
   ];
 
   const linkPartner = () => {
+    setShowLinkModal(true);
+  };
+
+  const handleLinkPartner = async () => {
+    if (!partnerEmail.trim()) {
+      Alert.alert('Error', 'Please enter your partner\'s email address');
+      return;
+    }
+
+    // For now, just show a message. In a real app, you'd implement the linking logic
     Alert.alert(
-      "Link with Partner",
-      "To link with your partner, they need to install Couply and you both need to enter the same couple code.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Generate Code", onPress: () => {
-          Alert.alert("Couple Code", "Your couple code is: LOVE2024\n\nShare this with your partner so they can link with you!");
-        }},
-      ]
+      'Feature Coming Soon',
+      'Partner linking will be available soon! For now, both partners need to sign up separately.'
     );
+    setShowLinkModal(false);
+    setPartnerEmail('');
   };
 
   const editProfile = () => {
     Alert.alert('Feature Coming Soon', 'Profile editing will be available soon!');
+  };
+
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: async () => {
+            const result = await signOut();
+            if (result.success) {
+              router.replace('/auth/login');
+            }
+          }
+        },
+      ]
+    );
   };
 
   return (
@@ -150,19 +171,22 @@ export default function ProfileScreen() {
             </View>
             
             <Text style={[typography.h2, { textAlign: 'center', marginTop: spacing.md }]}>
-              {profile.isLinked ? `${profile.partner1.name} & ${profile.partner2.name}` : "Link with Your Partner"}
+              {couple ? 
+                (couple.couple_name || `${couple.partner1?.name} & ${couple.partner2?.name}`) : 
+                profile?.name || "Your Profile"
+              }
             </Text>
             
-            {profile.isLinked ? (
+            {couple ? (
               <>
-                {profile.anniversaryDate && (
+                {couple.anniversary_date && (
                   <Text style={[typography.bodySecondary, { textAlign: 'center', marginTop: spacing.xs }]}>
-                    Together since {profile.anniversaryDate.toLocaleDateString()}
+                    Together since {new Date(couple.anniversary_date).toLocaleDateString()}
                   </Text>
                 )}
-                {profile.bio && (
+                {couple.couple_bio && (
                   <Text style={[typography.body, { textAlign: 'center', marginTop: spacing.sm }]}>
-                    {profile.bio}
+                    {couple.couple_bio}
                   </Text>
                 )}
                 <Pressable style={styles.editButton} onPress={editProfile}>
@@ -183,7 +207,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Stats Section */}
-        {profile.isLinked && (
+        {couple && (
           <View style={styles.section}>
             <Text style={[typography.h2, { marginBottom: spacing.md }]}>Your Journey</Text>
             <View style={styles.statsGrid}>
@@ -277,6 +301,57 @@ export default function ProfileScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Link Partner Modal */}
+        <Modal
+          visible={showLinkModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowLinkModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={[typography.h2, { marginBottom: spacing.lg }]}>Link with Partner</Text>
+              
+              <Text style={[typography.body, { marginBottom: spacing.md }]}>
+                Enter your partner's email address to send them an invitation to link your accounts.
+              </Text>
+              
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Partner's email address"
+                placeholderTextColor={colors.textSecondary}
+                value={partnerEmail}
+                onChangeText={setPartnerEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Anniversary date (optional)"
+                placeholderTextColor={colors.textSecondary}
+                value={anniversaryDate}
+                onChangeText={setAnniversaryDate}
+              />
+              
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setShowLinkModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalButton, styles.linkModalButton]}
+                  onPress={handleLinkPartner}
+                >
+                  <Text style={styles.linkModalButtonText}>Send Invitation</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -438,5 +513,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     backgroundColor: colors.highlight,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...typography.body,
+    color: colors.text,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelButtonText: {
+    ...typography.button,
+    color: colors.textSecondary,
+  },
+  linkModalButton: {
+    backgroundColor: colors.primary,
+  },
+  linkModalButtonText: {
+    ...typography.button,
+    color: colors.white,
   },
 });

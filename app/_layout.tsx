@@ -17,6 +17,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Button } from "@/components/button";
 import { WidgetProvider } from "@/contexts/WidgetContext";
+import { useAuth } from "@/hooks/useAuth";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -28,15 +29,16 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const networkState = useNetworkState();
+  const { user, loading } = useAuth();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && !loading) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, loading]);
 
   React.useEffect(() => {
     if (
@@ -50,7 +52,7 @@ export default function RootLayout() {
     }
   }, [networkState.isConnected, networkState.isInternetReachable]);
 
-  if (!loaded) {
+  if (!loaded || loading) {
     return null;
   }
 
@@ -91,8 +93,17 @@ export default function RootLayout() {
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               
+              {/* Authentication */}
+              <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+              <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
+              
               {/* Main app with tabs */}
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
+              {/* Social features */}
+              <Stack.Screen name="social/feed" options={{ headerShown: false }} />
+              <Stack.Screen name="social/groups" options={{ headerShown: false }} />
+              <Stack.Screen name="social/challenges" options={{ headerShown: false }} />
 
               {/* Modal Demo Screens */}
               <Stack.Screen

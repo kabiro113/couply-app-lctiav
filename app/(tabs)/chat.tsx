@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   View, 
   Text, 
@@ -15,100 +15,85 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/IconSymbol";
 import { colors, typography, spacing, borderRadius, shadows, commonStyles } from "@/styles/commonStyles";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface Message {
-  id: string;
-  text: string;
-  timestamp: Date;
-  isOwn: boolean;
-  type: 'text' | 'image' | 'voice' | 'sticker';
-}
+import { useMessages } from "@/hooks/useMessages";
+import { useAuth } from "@/hooks/useAuth";
+import { useCouple } from "@/hooks/useCouple";
 
 export default function ChatScreen() {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hey love! How was your day? 💕',
-      timestamp: new Date(Date.now() - 3600000),
-      isOwn: false,
-      type: 'text',
-    },
-    {
-      id: '2',
-      text: 'It was great! Just thinking about our date night tomorrow 😊',
-      timestamp: new Date(Date.now() - 3000000),
-      isOwn: true,
-      type: 'text',
-    },
-    {
-      id: '3',
-      text: 'I can\'t wait! I have something special planned ❤️',
-      timestamp: new Date(Date.now() - 1800000),
-      isOwn: false,
-      type: 'text',
-    },
-  ]);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const { messages, loading, sendMessage: sendMessageToBackend, sendHug, sendKiss } = useMessages();
+  const { profile } = useAuth();
+  const { couple } = useCouple();
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (message.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: message.trim(),
-        timestamp: new Date(),
-        isOwn: true,
-        type: 'text',
-      };
-      setMessages(prev => [...prev, newMessage]);
-      setMessage('');
+      const result = await sendMessageToBackend(message.trim());
+      if (result.success) {
+        setMessage('');
+        // Scroll to bottom after sending
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
     }
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const renderMessage = (msg: Message) => (
-    <View key={msg.id} style={[
-      styles.messageContainer,
-      msg.isOwn ? styles.ownMessage : styles.partnerMessage
-    ]}>
-      <View style={[
-        styles.messageBubble,
-        msg.isOwn ? styles.ownBubble : styles.partnerBubble
+  const renderMessage = (msg: any) => {
+    const isOwn = msg.sender_id === profile?.id;
+    
+    return (
+      <View key={msg.id} style={[
+        styles.messageContainer,
+        isOwn ? styles.ownMessage : styles.partnerMessage
       ]}>
-        <Text style={[
-          styles.messageText,
-          msg.isOwn ? styles.ownMessageText : styles.partnerMessageText
+        <View style={[
+          styles.messageBubble,
+          isOwn ? styles.ownBubble : styles.partnerBubble
         ]}>
-          {msg.text}
+          <Text style={[
+            styles.messageText,
+            isOwn ? styles.ownMessageText : styles.partnerMessageText
+          ]}>
+            {msg.content}
+          </Text>
+        </View>
+        <Text style={[
+          styles.messageTime,
+          isOwn ? styles.ownMessageTime : styles.partnerMessageTime
+        ]}>
+          {formatTime(msg.created_at)}
         </Text>
       </View>
-      <Text style={[
-        styles.messageTime,
-        msg.isOwn ? styles.ownMessageTime : styles.partnerMessageTime
-      ]}>
-        {formatTime(msg.timestamp)}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   const quickActions = [
     { icon: 'camera.fill', label: 'Photo', action: () => Alert.alert('Feature Coming Soon', 'Photo sharing will be available soon!') },
     { icon: 'mic.fill', label: 'Voice', action: () => Alert.alert('Feature Coming Soon', 'Voice messages will be available soon!') },
     { icon: 'face.smiling.fill', label: 'Sticker', action: () => Alert.alert('Feature Coming Soon', 'Stickers will be available soon!') },
-    { icon: 'heart.fill', label: 'Hug', action: () => sendHug() },
+    { icon: 'heart.fill', label: 'Hug', action: () => handleSendHug() },
   ];
 
-  const sendHug = () => {
-    const hugMessage: Message = {
-      id: Date.now().toString(),
-      text: '🤗 Sending you a big hug! 🤗',
-      timestamp: new Date(),
-      isOwn: true,
-      type: 'text',
-    };
-    setMessages(prev => [...prev, hugMessage]);
+  const handleSendHug = async () => {
+    const result = await sendHug();
+    if (result.success) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  };
+
+  const getPartnerName = () => {
+    if (!couple || !profile) return 'Partner';
+    
+    const partner = couple.partner1_id === profile.id ? couple.partner2 : couple.partner1;
+    return partner?.name || 'Partner';
   };
 
   return (
@@ -130,8 +115,10 @@ export default function ChatScreen() {
                 <IconSymbol name="person.fill" color={colors.card} size={20} />
               </View>
               <View>
-                <Text style={styles.partnerName}>My Partner</Text>
-                <Text style={styles.partnerStatus}>Online now</Text>
+                <Text style={styles.partnerName}>{getPartnerName()}</Text>
+                <Text style={styles.partnerStatus}>
+                  {couple ? 'Connected' : 'Not linked yet'}
+                </Text>
               </View>
             </View>
             <Pressable style={styles.headerButton} onPress={() => console.log('Video call')}>
@@ -142,18 +129,29 @@ export default function ChatScreen() {
 
         {/* Messages */}
         <ScrollView 
+          ref={scrollViewRef}
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.length === 0 ? (
+          {!couple ? (
+            <View style={styles.emptyState}>
+              <IconSymbol name="person.2" color={colors.textSecondary} size={48} />
+              <Text style={[typography.h3, { marginTop: spacing.md, textAlign: 'center' }]}>
+                Link with Your Partner
+              </Text>
+              <Text style={[typography.bodySecondary, { textAlign: 'center', marginTop: spacing.sm }]}>
+                Connect with your partner to start chatting privately
+              </Text>
+            </View>
+          ) : messages.length === 0 ? (
             <View style={styles.emptyState}>
               <IconSymbol name="message" color={colors.textSecondary} size={48} />
               <Text style={[typography.h3, { marginTop: spacing.md, textAlign: 'center' }]}>
                 Start Your Conversation
               </Text>
               <Text style={[typography.bodySecondary, { textAlign: 'center', marginTop: spacing.sm }]}>
-                Send your first message to begin chatting with your partner
+                Send your first message to begin chatting with {getPartnerName()}
               </Text>
             </View>
           ) : (

@@ -1,7 +1,23 @@
 
-import { Redirect } from 'expo-router';
+import { Redirect } from "expo-router";
+import { useAuth } from "@/hooks/useAuth";
+import { useCouple } from "@/hooks/useCouple";
 
 export default function Index() {
-  // For now, redirect to onboarding. In a real app, you'd check if user is logged in
-  return <Redirect href="/onboarding" />;
+  const { user, loading } = useAuth();
+  const { couple } = useCouple();
+
+  if (loading) {
+    return null; // Show loading screen
+  }
+
+  if (!user) {
+    return <Redirect href="/auth/login" />;
+  }
+
+  if (!couple) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  return <Redirect href="/(tabs)/(home)" />;
 }
