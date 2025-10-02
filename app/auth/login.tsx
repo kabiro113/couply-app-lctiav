@@ -21,7 +21,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, resendConfirmation } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -35,6 +35,14 @@ export default function LoginScreen() {
     if (result.success) {
       router.replace('/(tabs)/(home)');
     }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      return;
+    }
+    
+    await resendConfirmation(email);
   };
 
   return (
@@ -88,6 +96,16 @@ export default function LoginScreen() {
               >
                 <Text style={styles.buttonText}>
                   {loading ? 'Signing In...' : 'Sign In'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.linkButton}
+                onPress={handleResendConfirmation}
+                disabled={!email}
+              >
+                <Text style={[styles.linkText, !email && styles.linkTextDisabled]}>
+                  Resend Email Verification
                 </Text>
               </Pressable>
 
@@ -169,6 +187,18 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.primary,
   },
+  linkButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  linkText: {
+    ...typography.button,
+    color: colors.white,
+    textDecorationLine: 'underline',
+  },
+  linkTextDisabled: {
+    opacity: 0.5,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -179,9 +209,5 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.white,
     opacity: 0.8,
-  },
-  linkText: {
-    ...typography.button,
-    color: colors.white,
   },
 });

@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,21 +26,60 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
 
-  const handleSignUp = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      return;
+  const validateForm = () => {
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Please enter your full name.');
+      return false;
     }
-
+    
+    if (!email.trim()) {
+      Alert.alert('Validation Error', 'Please enter your email address.');
+      return false;
+    }
+    
+    if (!email.includes('@')) {
+      Alert.alert('Validation Error', 'Please enter a valid email address.');
+      return false;
+    }
+    
+    if (!password) {
+      Alert.alert('Validation Error', 'Please enter a password.');
+      return false;
+    }
+    
+    if (password.length < 6) {
+      Alert.alert('Validation Error', 'Password must be at least 6 characters long.');
+      return false;
+    }
+    
     if (password !== confirmPassword) {
+      Alert.alert('Validation Error', 'Passwords do not match.');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSignUp = async () => {
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-    const result = await signUp(email, password, name);
+    const result = await signUp(email.trim().toLowerCase(), password, name.trim());
     setLoading(false);
 
     if (result.success) {
-      router.replace('/auth/login');
+      // Clear form
+      setName('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      
+      // Navigate to login after successful signup
+      setTimeout(() => {
+        router.replace('/auth/login');
+      }, 2000);
     }
   };
 
@@ -90,7 +130,7 @@ export default function SignUpScreen() {
                 <IconSymbol name="lock" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password"
+                  placeholder="Password (min 6 characters)"
                   placeholderTextColor={colors.textSecondary}
                   value={password}
                   onChangeText={setPassword}

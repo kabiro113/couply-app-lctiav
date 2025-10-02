@@ -1,3 +1,4 @@
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Database } from './types';
 import { createClient } from '@supabase/supabase-js'
@@ -25,31 +26,74 @@ export const getCurrentUser = async () => {
 
 export const getCurrentProfile = async () => {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user || !user.email_confirmed_at) {
+    console.log('No authenticated user or email not confirmed');
+    return null;
+  }
   
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-  
-  return profile;
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching profile:', error);
+      
+      // If profile doesn't exist, try to create it
+      if (error.code === 'PGRST116') {
+        console.log('Profile not found, creating one...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            name: user.user_metadata?.name || 'User',
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          return null;
+        }
+        
+        return newProfile;
+      }
+      
+      return null;
+    }
+    
+    return profile;
+  } catch (error) {
+    console.error('Unexpected error fetching profile:', error);
+    return null;
+  }
 };
 
 export const getCurrentCouple = async () => {
   const profile = await getCurrentProfile();
   if (!profile) return null;
   
-  const { data: couple } = await supabase
-    .from('couples')
-    .select(`
-      *,
-      partner1:partner1_id(*),
-      partner2:partner2_id(*)
-    `)
-    .or(`partner1_id.eq.${profile.id},partner2_id.eq.${profile.id}`)
-    .eq('status', 'active')
-    .single();
-  
-  return couple;
+  try {
+    const { data: couple, error } = await supabase
+      .from('couples')
+      .select(`
+        *,
+        partner1:partner1_id(*),
+        partner2:partner2_id(*)
+      `)
+      .or(`partner1_id.eq.${profile.id},partner2_id.eq.${profile.id}`)
+      .eq('status', 'active')
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching couple:', error);
+    }
+    
+    return couple;
+  } catch (error) {
+    console.error('Unexpected error fetching couple:', error);
+    return null;
+  }
 };
