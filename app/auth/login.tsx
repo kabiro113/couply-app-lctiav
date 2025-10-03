@@ -235,4 +235,11 @@ const styles = StyleSheet.create({
     color: colors.white,
     opacity: 0.8,
   },
+  errorText: {
+  color: '#ff6b6b',
+  textAlign: 'center',
+  marginBottom: spacing.sm,
+  ...typography.body,
+},
+
 });
