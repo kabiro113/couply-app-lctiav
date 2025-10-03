@@ -24,8 +24,10 @@ export default function LoginScreen() {
   const { signIn, resendConfirmation } = useAuth();
 
 const handleLogin = async () => {
+  setErrorMessage(''); // Clear any previous error
+
   if (!email || !password) {
-    console.warn('Login aborted: Email or password is missing.');
+    setErrorMessage('Please enter both email and password.');
     return;
   }
 
@@ -39,9 +41,12 @@ const handleLogin = async () => {
     console.log('Login successful. Redirecting to home...');
     router.replace('/(tabs)/(home)');
   } else {
-    console.error('Login failed:', result.error?.message || 'Unknown error');
+    const message = result.error?.message || 'Login failed. Please try again.';
+    console.error('Login failed:', message);
+    setErrorMessage(message);
   }
 };
+
 
 
 const handleResendConfirmation = async () => {
