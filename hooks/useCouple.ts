@@ -39,15 +39,16 @@ export const useCouple = () => {
         return { success: false, error: 'Partner not found' };
       }
 
-      const { data: partnerProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', partnerUser.id)
-        .single();
+const { data: partnerProfile, error: profileError } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('user_id', partnerUser.id)
+  .maybeSingle();
 
-      if (!partnerProfile) {
-        return { success: false, error: 'Partner profile not found' };
-      }
+if (!partnerProfile) {
+  return { success: false, error: 'Partner profile not found' };
+}
+
 
       // Create couple
       const { data, error } = await supabase
