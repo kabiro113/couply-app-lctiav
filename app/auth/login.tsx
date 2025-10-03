@@ -22,6 +22,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, resendConfirmation } = useAuth();
+  const [errorMessage, setErrorMessage] = useState('');
+
 
 const handleLogin = async () => {
   setErrorMessage(''); // Clear any previous error
