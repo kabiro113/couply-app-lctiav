@@ -44,13 +44,22 @@ const handleLogin = async () => {
 };
 
 
-  const handleResendConfirmation = async () => {
-    if (!email) {
-      return;
-    }
-    
+const handleResendConfirmation = async () => {
+  if (!email) {
+    console.warn('Resend aborted: Email is missing.');
+    return;
+  }
+
+  console.log('Resending confirmation email to:', email);
+
+  try {
     await resendConfirmation(email);
-  };
+    console.log('Confirmation email sent successfully.');
+  } catch (error) {
+    console.error('Failed to resend confirmation email:', error.message || error);
+  }
+};
+
 
   return (
     <LinearGradient
