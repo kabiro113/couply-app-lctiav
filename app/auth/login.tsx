@@ -108,6 +108,10 @@ const handleResendConfirmation = async () => {
                   secureTextEntry
                   autoComplete="password"
                 />
+                {errorMessage !== '' && (
+  <Text style={styles.errorText}>{errorMessage}</Text>
+)}
+
               </View>
 
               <Pressable
