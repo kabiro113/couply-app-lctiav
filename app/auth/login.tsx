@@ -109,13 +109,12 @@ const handleResendConfirmation = async () => {
                   onChangeText={setPassword}
                   secureTextEntry
                   autoComplete="password"
-                />
-                {errorMessage !== '' && (
-  <Text style={styles.errorText}>{errorMessage}</Text>
-)}
+                 />
 
               </View>
-
+  {errorMessage !== '' && (
+  <Text style={styles.errorText}>{errorMessage}</Text>
+          )}  
               <Pressable
                 style={[styles.button, loading && styles.buttonDisabled]}
                 onPress={handleLogin}
