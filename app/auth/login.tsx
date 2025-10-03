@@ -23,19 +23,26 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { signIn, resendConfirmation } = useAuth();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      return;
-    }
+const handleLogin = async () => {
+  if (!email || !password) {
+    console.warn('Login aborted: Email or password is missing.');
+    return;
+  }
 
-    setLoading(true);
-    const result = await signIn(email, password);
-    setLoading(false);
+  console.log('Attempting login with:', { email, password });
 
-    if (result.success) {
-      router.replace('/(tabs)/(home)');
-    }
-  };
+  setLoading(true);
+  const result = await signIn(email, password);
+  setLoading(false);
+
+  if (result.success) {
+    console.log('Login successful. Redirecting to home...');
+    router.replace('/(tabs)/(home)');
+  } else {
+    console.error('Login failed:', result.error?.message || 'Unknown error');
+  }
+};
+
 
   const handleResendConfirmation = async () => {
     if (!email) {
